@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMS - Electronic Medical System</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --background-color: #f4f4f4;
+            --text-color: #333;
+            --border-color: #ddd;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        nav {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 0;
+        }
+
+        nav ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        nav ul li {
+            margin: 0 10px;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        nav ul li a:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .center {
+            display: none;
+            flex-grow: 1;
+        }
+
+        .patient-list {
+            width: 200px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-right: 20px;
+        }
+
+        .patient-list h3 {
+            margin-top: 0;
+        }
+
+        .patient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .patient-card {
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .patient-card:nth-child(even) {
+            background-color: #e0e0e0;
+        }
+
+        .patient-card:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .patient-info {
+            margin-bottom: 20px;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .calendar-day {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            min-height: 100px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .visit {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 5px;
+            margin-bottom: 5px;
+            cursor: move;
+            border-radius: 3px;
+            font-size: 0.9em;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .visit.manually-adjusted::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 8px;
+            height: 8px;
+            background-color: red;
+            border-radius: 50%;
+        }
+
+        .trash-bin {
+            position: fixed;
+            bottom: -70px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: #e74c3c;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 24px;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .trash-bin.visible {
+            bottom: 20px;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .trash-bin.active {
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        #clientProfile, #patientInfo {
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .profile-photo {
+            font-size: 64px;
+            margin-right: 20px;
+        }
+
+        .profile-details {
+            flex-grow: 1;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+
+        /* Add styles for the new patient form */
+        #addPatientCenter {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #addPatientForm {
+            display: flex;
+            flex-direction: column;
+            width: 300px;
+            margin-top: 20px;
+        }
+
+        #addPatientForm input,
+        #addPatientForm select {
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+
+        #addPatientForm button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        /* New styles for patient grid */
+        .patient-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .patient-card {
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .patient-card:nth-child(even) {
+            background-color: #e0e0e0;
+        }
+
+        .patient-card:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Profile tabs styles */
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .profile-photo {
+            font-size: 64px;
+            margin-right: 20px;
+        }
+
+        .profile-basic-info {
+            flex-grow: 1;
+        }
+
+        .profile-tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            background-color: #f0f0f0;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 10px 20px;
+            transition: 0.3s;
+            font-size: 17px;
+        }
+
+        .tab-button:hover {
+            background-color: #ddd;
+        }
+
+        .tab-button.active {
+            background-color: #ccc;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+        /* QA table styles */
+        #qaTable {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+
+        #qaTable th, #qaTable td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        #qaTable tr {
+            background-color: #f0f0f0;
+            border-radius: 10px;
+        }
+
+        #qaTable tr:nth-child(even) {
+            background-color: #e0e0e0;
+        }
+
+        #qaTable tr td:first-child {
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+        }
+
+        #qaTable tr td:last-child {
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        .visit-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+
+        .visit-table th, .visit-table td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        .visit-table tr {
+            background-color: #f0f0f0;
+            border-radius: 10px;
+        }
+
+        .visit-table tr:nth-child(even) {
+            background-color: #e0e0e0;
+        }
+
+        .visit-table tr td:first-child {
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
+        }
+
+        .visit-table tr td:last-child {
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+
+        /* Admin center styles */
+        .admin-table {
+            width: 100%;
+            border-spacing: 0 15px;
+            border-collapse: separate;
+        }
+
+        .admin-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .admin-row.header {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+
+        .admin-cell {
+            flex: 1;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            margin-right: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .admin-cell:last-child {
+            margin-right: 0;
+        }
+
+        .admin-cell button {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .admin-tab-content {
+            overflow-x: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="#" onclick="showCenter('client')">Client Center</a></li>
+            <li><a href="#" onclick="showCenter('schedule')">Schedule Center</a></li>
+            <li><a href="#" onclick="showCenter('qa')">Quality Assurance Center</a></li>
+            <li><a href="#" onclick="showCenter('adminInfo')">Admin Info</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <div id="clientCenter" class="center">
+            <div class="patient-list">
+                <h3>Patients</h3>
+                <div class="patient-grid" id="clientList">
+                    <!-- Client list will be populated here -->
+                </div>
+            </div>
+            <div class="main-content">
+                <div id="clientProfile"></div>
+            </div>
+        </div>
+
+        <div id="scheduleCenter" class="center">
+            <div class="patient-list">
+                <h3>Patients</h3>
+                <div class="patient-grid" id="scheduleClientList"></div>
+            </div>
+            <div class="main-content">
+                <div id="patientInfo"></div>
+                <div class="calendar" id="calendar"></div>
+            </div>
+        </div>
+
+        <div id="qaCenter" class="center">
+            <h2>Quality Assurance Center</h2>
+            <table id="qaTable">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Date</th>
+                        <th>Task</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- QA data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="addPatientCenter" class="center">
+            <h2>Add New Patient</h2>
+            <form id="addPatientForm">
+                <input type="text" id="newPatientName" placeholder="Patient Name" required>
+                <input type="date" id="newPatientDOB" required>
+                <input type="number" id="newPatientMaxHours" placeholder="Max Hours per Week" required>
+                <input type="text" id="newPatientAddress" placeholder="Address" required>
+                <input type="tel" id="newPatientPhone" placeholder="Phone Number" required>
+                <input type="text" id="newPatientPhysician" placeholder="Physician" required>
+                <button type="submit">Add Patient</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="trashBin" class="trash-bin" ondragover="allowDrop(event)" ondrop="drop(event)">🗑️</div>
+
+    <!-- Modal for creating/editing visits -->
+    <div id="visitModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Visit Details</h2>
+            <form id="visitForm">
+                <label for="visitDate">Date:</label>
+                <input type="date" id="visitDate" required><br><br>
+                
+                <label for="visitTime">Time:</label>
+                <input type="time" id="visitTime" required><br><br>
+                
+                <label for="visitDuration">Duration (hours):</label>
+                <input type="number" id="visitDuration" min="0.5" step="0.5" required><br><br>
+                
+                <label for="visitCNA">Assigned CNA:</label>
+                <select id="visitCNA" required>
+                    <!-- Options will be populated dynamically -->
+                </select><br><br>
+                
+                <label for="visitTask">Task:</label>
+                <input type="text" id="visitTask" required><br><br>
+                
+                <label for="visitStatus">Status:</label>
+                <select id="visitStatus">
+                    <option value="Pending">Pending</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select><br><br>
+                
+                <label for="manuallyAdjusted">Manually Adjusted:</label>
+                <input type="checkbox" id="manuallyAdjusted"><br><br>
+                
+                <label for="completionComment">Completion Comment:</label>
+                <textarea id="completionComment"></textarea><br><br>
+                
+                <button type="submit">Save Visit</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="adminCenter" class="center">
+        <h2>Admin Center</h2>
+        <div class="admin-tabs">
+            <button class="admin-tab-button active" onclick="showAdminTab(event, 'patientsTab')">Patients</button>
+            <button class="admin-tab-button" onclick="showAdminTab(event, 'cnasTab')">CNAs</button>
+            <button class="admin-tab-button" onclick="showAdminTab(event, 'staffTab')">Staff</button>
+            <button class="admin-tab-button" onclick="showAdminTab(event, 'insuranceTab')">Insurance</button>
+        </div>
+        <div id="patientsTab" class="admin-tab-content active">
+            <!-- Patients content will be dynamically populated here -->
+        </div>
+        <div id="cnasTab" class="admin-tab-content">
+            <!-- CNAs content will be dynamically populated here -->
+        </div>
+        <div id="staffTab" class="admin-tab-content">
+            <!-- Staff content will be dynamically populated here -->
+        </div>
+        <div id="insuranceTab" class="admin-tab-content">
+            <!-- Insurance content will be dynamically populated here -->
+        </div>
+    </div>
+
+    <script>
+        // Sample data
+        let clients = [
+    {
+        id: 1,
+        name: "John Doe",
+        photo: "👤",
+        dob: "1980-01-01",
+        address: "123 Main St, 3RD FLR 6C, Providence, RI, 02903",
+        phone: "123-456-7890",
+        phoneType: "Mobile",
+        mr: "MR12345",
+        dnr: "No",
+        soc: "2024-05-29",
+        sex: "Male",
+        marital: "Single",
+        genderPronouns: "He/Him",
+        office: "Providence Office",
+        ethnicity: "",
+        race: "",
+        height: "",
+        weight: "",
+        referralDate: "",
+        carePeriod: "5/29/2024 - ",
+        triageLevel: "2. Priority 2.",
+        insurance: {
+            provider: "Medicaid",
+            policyNumber: "MED123456",
+            type: "Primary"
+        },
+        emergencyContact: {
+            name: "",
+            phone: "",
+            relationship: ""
+        },
+        allergies: "",
+        pharmacy: {
+            name: "",
+            phone: ""
+        },
+        currentCarePeriod: {
+            admissionDiagnosis: "Diagnosis 1",
+            primaryDiagnosis: "Diagnosis 2",
+            secondaryDiagnosis: "Diagnosis 3",
+            primaryClinician: "Dr. Smith",
+            caseManager: "Jane Manager",
+            startOfCare: "2024-05-29",
+            frequencies: ""
+        },
+        primaryPhysician: {
+            name: "Dr. Johnson",
+            address: "456 Medical Center, Providence, RI",
+            specialty: "General Practice",
+            phone: "987-654-3210",
+            fax: "987-654-3211",
+            npi: "1234567890"
+        },
+        servicesRequired: "",
+        dme: "",
+        maxHours: 20
+    },
+    {
+    id: 2,
+    name: "Jane Smith",
+    photo: "👤",
+    dob: "1975-02-15",
+    address: "456 Elm St, Apt 12B, Providence, RI, 02904",
+    phone: "234-567-8901",
+    phoneType: "Home",
+    mr: "MR67890",
+    dnr: "Yes",
+    soc: "2024-06-15",
+    sex: "Female",
+    marital: "Married",
+    genderPronouns: "She/Her",
+    office: "Providence Office",
+    ethnicity: "Hispanic",
+    race: "White",
+    height: "165 cm",
+    weight: "70 kg",
+    referralDate: "2024-06-10",
+    carePeriod: "6/15/2024 - ",
+    triageLevel: "1. Priority 1.",
+    insurance: {
+        provider: "Medicare",
+        policyNumber: "MED654321",
+        type: "Primary"
+    },
+    emergencyContact: {
+        name: "Robert Smith",
+        phone: "234-567-8902",
+        relationship: "Spouse"
+    },
+    allergies: "Peanuts",
+    pharmacy: {
+        name: "Elm Pharmacy",
+        phone: "234-567-8903"
+    },
+    currentCarePeriod: {
+        admissionDiagnosis: "Diagnosis A",
+        primaryDiagnosis: "Diagnosis B",
+        secondaryDiagnosis: "Diagnosis C",
+        primaryClinician: "Dr. White",
+        caseManager: "John Manager",
+        startOfCare: "2024-06-15",
+        frequencies: "Daily"
+    },
+    primaryPhysician: {
+        name: "Dr. Adams",
+        address: "789 Health Blvd, Providence, RI",
+        specialty: "Cardiology",
+        phone: "987-654-3212",
+        fax: "987-654-3213",
+        npi: "0987654321"
+    },
+    servicesRequired: "Nursing, Physical Therapy",
+    dme: "Wheelchair",
+    maxHours: 30
+},
+{
+    id: 3,
+    name: "Michael Johnson",
+    photo: "👤",
+    dob: "1965-03-22",
+    address: "789 Maple Ave, Ste 34, Providence, RI, 02906",
+    phone: "345-678-9012",
+    phoneType: "Work",
+    mr: "MR24680",
+    dnr: "No",
+    soc: "2024-07-01",
+    sex: "Male",
+    marital: "Divorced",
+    genderPronouns: "He/Him",
+    office: "Providence Office",
+    ethnicity: "Asian",
+    race: "Asian",
+    height: "180 cm",
+    weight: "85 kg",
+    referralDate: "2024-06-25",
+    carePeriod: "7/1/2024 - ",
+    triageLevel: "3. Priority 3.",
+    insurance: {
+        provider: "Blue Cross Blue Shield",
+        policyNumber: "BCBS123456",
+        type: "Primary"
+    },
+    emergencyContact: {
+        name: "Laura Johnson",
+        phone: "345-678-9013",
+        relationship: "Daughter"
+    },
+    allergies: "None",
+    pharmacy: {
+        name: "Maple Pharmacy",
+        phone: "345-678-9014"
+    },
+    currentCarePeriod: {
+        admissionDiagnosis: "Diagnosis X",
+        primaryDiagnosis: "Diagnosis Y",
+        secondaryDiagnosis: "Diagnosis Z",
+        primaryClinician: "Dr. Brown",
+        caseManager: "Alice Manager",
+        startOfCare: "2024-07-01",
+        frequencies: "Weekly"
+    },
+    primaryPhysician: {
+        name: "Dr. Wilson",
+        address: "123 Care Rd, Providence, RI",
+        specialty: "Neurology",
+        phone: "987-654-3214",
+        fax: "987-654-3215",
+        npi: "2345678901"
+    },
+    servicesRequired: "Occupational Therapy",
+    dme: "Walker",
+    maxHours: 15
+}
+
+];
+
+        let visits = [
+            { id: 1, clientId: 1, date: "2024-07-01", time: "09:00", duration: 3, task: "CNA COMBO DAY", status: "Completed", assignedTo: "Alice Brown", manuallyAdjusted: false },
+            { id: 2, clientId: 2, date: "2024-07-02", time: "15:00", duration: 4, task: "CNA ONLY EVE", status: "Pending", assignedTo: "Bob Green", manuallyAdjusted: false },
+            { id: 3, clientId: 3, date: "2024-07-03", time: "10:00", duration: 2, task: "HOMEMAKER VISIT", status: "Completed", assignedTo: "Charlie Davis", manuallyAdjusted: true }
+        ];
+
+        let cnas = [
+            { id: 1, name: "Alice Brown" },
+            { id: 2, name: "Bob Green" },
+            { id: 3, name: "Charlie Davis" }
+        ];
+        
+        let selectedClient = null;
+
+        function showCenter(centerName) {
+            document.querySelectorAll('.center').forEach(center => center.style.display = 'none');
+            document.getElementById(`${centerName}Center`).style.display = 'flex';
+
+            if (centerName === 'client') {
+                populateClientList();
+            } else if (centerName === 'schedule') {
+                populateScheduleClientList();
+                if (selectedClient) {
+                    showClientSchedule(selectedClient);
+                }
+            } else if (centerName === 'qa') {
+                populateQATable();
+            }
+        }
+
+        function populateClientList() {
+            const clientList = document.getElementById('clientList');
+            clientList.innerHTML = '';
+            clients.forEach(client => {
+                const card = document.createElement('div');
+                card.className = 'patient-card';
+                card.textContent = client.name;
+                card.onclick = () => showClientProfile(client);
+                clientList.appendChild(card);
+            });
+        }
+
+        function showClientProfile(client) {
+            const profileDiv = document.getElementById('clientProfile');
+            profileDiv.innerHTML = `
+                <div class="profile-photo">${client.photo}</div>
+                <div class="profile-details">
+                    <h2>${client.name}</h2>
+                    <p>Date of Birth: ${client.dob}</p>
+                    <p>Address: ${client.address}</p>
+                    <p>Phone: ${client.phone}</p>
+                    <p>Physician: ${client.physician}</p>
+                    <p>Max Hours per Week: ${client.maxHours}</p>
+                    <h3>Recent Visits</h3>
+                    <table class="visit-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Task</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${visits.filter(v => v.clientId === client.id).map(v => `
+                                <tr>
+                                    <td>${v.date}</td>
+                                    <td>${v.task}</td>
+                                    <td>${v.status}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <button onclick="showCenter('schedule'); showClientSchedule(${client.id})">View Schedule</button>
+                    <button onclick="generateClientDocument(${client.id})">Generate Client Document</button>
+                </div>
+            `;
+        }
+
+        function showProfileTab(event, tabName) {
+            const tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove("active");
+            }
+            const tabButtons = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].classList.remove("active");
+            }
+            document.getElementById(tabName).classList.add("active");
+            event.currentTarget.classList.add("active");
+        }
+
+        function generateClientDocument(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            
+            const docContent = `
+                <div id="clientDocument" style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+                    <h1 style="text-align: center;">Client Information</h1>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 50%; padding: 10px; border: 1px solid #000;">
+                                <strong>Name:</strong> ${client.name}<br>
+                                <strong>Address:</strong> ${client.address}<br>
+                                <strong>Phone:</strong> ${client.phone}<br>
+                                <strong>Phone Type:</strong> ${client.phoneType}<br>
+                                <strong>MR:</strong> ${client.mr}<br>
+                                <strong>DNR:</strong> ${client.dnr}
+                            </td>
+                            <td style="width: 50%; padding: 10px; border: 1px solid #000;">
+                                <strong>SOC:</strong> ${client.soc}<br>
+                                <strong>Birth Date:</strong> ${client.birthDate}<br>
+                                <strong>Sex:</strong> ${client.sex}<br>
+                                <strong>Marital:</strong> ${client.marital}<br>
+                                <strong>Gender Pronouns:</strong> ${client.genderPronouns}<br>
+                                <strong>Office:</strong> ${client.office}
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <h2>Care Information</h2>
+                    <p><strong>Care Period:</strong> ${client.carePeriod}</p>
+                    <p><strong>Triage Level:</strong> ${client.triageLevel}</p>
+                    
+                    <h2>Insurance</h2>
+                    <p><strong>${client.insurance.provider}:</strong> ${client.insurance.policyNumber} (${client.insurance.type})</p>
+                    
+                    <h2>Emergency Contact</h2>
+                    <p><strong>Name:</strong> ${client.emergencyContact.name}</p>
+                    <p><strong>Phone:</strong> ${client.emergencyContact.phone}</p>
+                    <p><strong>Relationship:</strong> ${client.emergencyContact.relationship}</p>
+                    
+                    <h2>Current Care Period</h2>
+                    <p><strong>Admission Diagnosis:</strong> ${client.currentCarePeriod.admissionDiagnosis}</p>
+                    <p><strong>Primary Diagnosis:</strong> ${client.currentCarePeriod.primaryDiagnosis}</p>
+                    <p><strong>Secondary Diagnosis:</strong> ${client.currentCarePeriod.secondaryDiagnosis}</p>
+                    <p><strong>Primary Clinician:</strong> ${client.currentCarePeriod.primaryClinician}</p>
+                    <p><strong>Case Manager:</strong> ${client.currentCarePeriod.caseManager}</p>
+                    <p><strong>Start of Care:</strong> ${client.currentCarePeriod.startOfCare}</p>
+                    <p><strong>Frequencies:</strong> ${client.currentCarePeriod.frequencies}</p>
+                    
+                    <h2>Primary Physician</h2>
+                    <p><strong>Name:</strong> ${client.primaryPhysician.name}</p>
+                    <p><strong>Address:</strong> ${client.primaryPhysician.address}</p>
+                    <p><strong>Specialty:</strong> ${client.primaryPhysician.specialty}</p>
+                    <p><strong>Phone:</strong> ${client.primaryPhysician.phone}</p>
+                    <p><strong>Fax:</strong> ${client.primaryPhysician.fax}</p>
+                    <p><strong>NPI:</strong> ${client.primaryPhysician.npi}</p>
+                </div>
+            `;
+            
+            const element = document.createElement('div');
+            element.innerHTML = docContent;
+            
+            html2pdf().from(element).save(`${client.name}_info.pdf`);
+        }
+
+        function populateScheduleClientList() {
+            const clientList = document.getElementById('scheduleClientList');
+            clientList.innerHTML = '';
+            clients.forEach(client => {
+                const card = document.createElement('div');
+                card.className = 'patient-card';
+                card.textContent = client.name;
+                card.onclick = () => showClientSchedule(client.id);
+                clientList.appendChild(card);
+            });
+        }
+
+        function showClientSchedule(clientId) {
+    selectedClient = clientId;
+    const client = clients.find(c => c.id === clientId);
+    const patientInfo = document.getElementById('patientInfo');
+    patientInfo.innerHTML = `
+        <div class="profile-photo">${client.photo}</div>
+        <div class="profile-details">
+            <h2>${client.name}</h2>
+            <p>Address: ${client.address || '[Blank]'}</p>
+            <p>Phone: ${client.phone || '[Blank]'}</p>
+            <p>DNR: ${client.dnr || '[Blank]'}</p>
+            <p>Triage Level: ${client.triageLevel || '[Blank]'}</p>
+            <p>Max Hours per Week: ${client.maxHours}</p>
+        </div>
+         `;
+            createCalendar();
+        }
+
+        function createCalendar() {
+            const calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
+            for (let i = 1; i <= 31; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day';
+                day.textContent = i;
+                day.onclick = () => showVisitModal(new Date(2024, 6, i)); // July 2024
+                day.ondragover = allowDrop;
+                day.ondrop = drop;
+                calendar.appendChild(day);
+            }
+            addVisitsToCalendar();
+        }
+
+        function addVisitsToCalendar() {
+            visits.filter(v => v.clientId === selectedClient).forEach(visit => {
+                const visitElement = createVisitElement(visit);
+                const day = parseInt(visit.date.split('-')[2]);
+                document.querySelectorAll('.calendar-day')[day - 1].appendChild(visitElement);
+            });
+        }
+
+        function createVisitElement(visit) {
+            const visitElement = document.createElement('div');
+            visitElement.className = 'visit';
+            visitElement.draggable = true;
+            visitElement.ondragstart = drag;
+            visitElement.ondragend = dragEnd;
+            visitElement.onclick = (e) => {
+                e.stopPropagation();
+                showVisitModal(null, visit);
+            };
+            visitElement.textContent = `${visit.time} - ${visit.task}`;
+            if (visit.manuallyAdjusted) {
+                visitElement.classList.add('manually-adjusted');
+            }
+            visitElement.dataset.visitId = visit.id;
+            return visitElement;
+        } 
+
+        function showVisitModal(date, existingVisit = null) {
+            const modal = document.getElementById('visitModal');
+            const form = document.getElementById('visitForm');
+            const closeBtn = modal.querySelector('.close');
+
+            // Populate CNA dropdown
+            const cnaSelect = document.getElementById('visitCNA');
+            cnaSelect.innerHTML = cnas.map(cna => `<option value="${cna.id}">${cna.name}</option>`).join('');
+
+            if (existingVisit) {
+                document.getElementById('visitDate').value = existingVisit.date;
+                document.getElementById('visitTime').value = existingVisit.time;
+                document.getElementById('visitDuration').value = existingVisit.duration;
+                document.getElementById('visitCNA').value = cnas.find(cna => cna.name === existingVisit.assignedTo).id;
+                document.getElementById('visitTask').value = existingVisit.task;
+                document.getElementById('visitStatus').value = existingVisit.status;
+                document.getElementById('manuallyAdjusted').checked = existingVisit.manuallyAdjusted;
+            } else {
+                form.reset();
+                document.getElementById('visitDate').value = date.toISOString().split('T')[0];
+            }
+
+            modal.style.display = 'block';
+
+            closeBtn.onclick = () => modal.style.display = 'none';
+            window.onclick = (event) => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            };
+
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                saveVisit(existingVisit);
+                modal.style.display = 'none';
+            };
+        }
+
+        function saveVisit(existingVisit) {
+            const visitData = {
+                id: existingVisit ? existingVisit.id : Date.now(),
+                clientId: selectedClient,
+                date: document.getElementById('visitDate').value,
+                time: document.getElementById('visitTime').value,
+                duration: parseFloat(document.getElementById('visitDuration').value),
+                task: document.getElementById('visitTask').value,
+                status: document.getElementById('visitStatus').value,
+                assignedTo: cnas.find(cna => cna.id === parseInt(document.getElementById('visitCNA').value)).name,
+                manuallyAdjusted: document.getElementById('manuallyAdjusted').checked
+            };
+
+            if (existingVisit) {
+                const index = visits.findIndex(v => v.id === existingVisit.id);
+                visits[index] = visitData;
+            } else {
+                visits.push(visitData);
+            }
+
+            createCalendar();
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.dataset.visitId);
+            document.getElementById('trashBin').classList.add('visible');
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+            if (ev.target.id === 'trashBin') {
+                ev.target.classList.add('active');
+            }
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const visitId = parseInt(ev.dataTransfer.getData("text"));
+            
+            if (ev.target.id === 'trashBin') {
+                visits = visits.filter(v => v.id !== visitId);
+                createCalendar();
+            } else if (ev.target.className.includes('calendar-day')) {
+                const visit = visits.find(v => v.id === visitId);
+                if (visit) {
+                    const newDate = new Date(2024, 6, parseInt(ev.target.textContent));
+                    visit.date = newDate.toISOString().split('T')[0];
+                    createCalendar();
+                }
+            }
+
+            document.getElementById('trashBin').classList.remove('visible', 'active');
+        }
+
+        function dragEnd() {
+            document.getElementById('trashBin').classList.remove('visible', 'active');
+        }
+
+        function populateQATable() {
+            const qaTable = document.getElementById('qaTable').getElementsByTagName('tbody')[0];
+            qaTable.innerHTML = '';
+            visits.filter(visit => visit.status !== 'Completed').forEach(visit => {
+                const row = qaTable.insertRow();
+                row.innerHTML = `
+                    <td>${clients.find(c => c.id === visit.clientId).name}</td>
+                    <td>${visit.date}</td>
+                    <td>${visit.task}</td>
+                    <td>${visit.status}</td>
+                    <td>${visit.assignedTo}</td>
+                    <td><button onclick="completeVisit(${visit.id})">Complete</button></td>
+                `;
+            });
+        }
+        
+        function completeVisit(visitId) {
+            const visit = visits.find(v => v.id === visitId);
+            visit.status = 'Completed';
+            populateQATable();
+        }
+
+        function addNewPatient(e) {
+            e.preventDefault();
+            const newPatient = {
+                id: clients.length + 1,
+                name: document.getElementById('newPatientName').value,
+                dob: document.getElementById('newPatientDOB').value,
+                maxHours: parseInt(document.getElementById('newPatientMaxHours').value),
+                photo: "👤",
+                address: document.getElementById('newPatientAddress').value,
+                phone: document.getElementById('newPatientPhone').value,
+                physician: document.getElementById('newPatientPhysician').value
+            };
+            clients.push(newPatient);
+            document.getElementById('addPatientForm').reset();
+            alert('Patient added successfully!');
+            populateClientList();
+            populateScheduleClientList();
+        }
+
+        function showAdminTab(event, tabName) {
+    const tabContents = document.getElementsByClassName("admin-tab-content");
+    for (let i = 0; i < tabContents.length; i++) {
+        tabContents[i].classList.remove("active");
+    }
+    const tabButtons = document.getElementsByClassName("admin-tab-button");
+    for (let i = 0; i < tabButtons.length; i++) {
+        tabButtons[i].classList.remove("active");
+    }
+    document.getElementById(tabName).classList.add("active");
+    event.currentTarget.classList.add("active");
+
+    // Populate the tab content
+    switch(tabName) {
+        case 'patientsTab':
+            populatePatientsTab();
+            break;
+        case 'cnasTab':
+            populateCNAsTab();
+            break;
+        case 'staffTab':
+            populateStaffTab();
+            break;
+        case 'insuranceTab':
+            populateInsuranceTab();
+            break;
+    }
+}
+
+function populatePatientsTab() {
+    const tab = document.getElementById('patientsTab');
+    tab.innerHTML = `
+        <div class="admin-table">
+            <div class="admin-row header">
+                <div class="admin-cell">Name</div>
+                <div class="admin-cell">DOB</div>
+                <div class="admin-cell">Phone</div>
+                <div class="admin-cell">Actions</div>
+            </div>
+            ${clients.map(client => `
+                <div class="admin-row">
+                    <div class="admin-cell">${client.name}</div>
+                    <div class="admin-cell">${client.dob}</div>
+                    <div class="admin-cell">${client.phone}</div>
+                    <div class="admin-cell">
+                        <button onclick="deletePatient(${client.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        <button onclick="showAddPatientModal()">Add Patient</button>
+    `;
+}
+
+function populateCNAsTab() {
+    const tab = document.getElementById('cnasTab');
+    tab.innerHTML = `
+        <div class="admin-table">
+            <div class="admin-row header">
+                <div class="admin-cell">Name</div>
+                <div class="admin-cell">ID</div>
+                <div class="admin-cell">Actions</div>
+            </div>
+            ${cnas.map(cna => `
+                <div class="admin-row">
+                    <div class="admin-cell">${cna.name}</div>
+                    <div class="admin-cell">${cna.id}</div>
+                    <div class="admin-cell">
+                        <button onclick="deleteCNA(${cna.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        <button onclick="showAddCNAModal()">Add CNA</button>
+    `;
+}
+
+function populateStaffTab() {
+    // Similar to populatePatientsTab and populateCNAsTab
+    // Implement once you have a staff data structure
+}
+
+function populateInsuranceTab() {
+    // Similar to populatePatientsTab and populateCNAsTab
+    // Implement once you have an insurance data structure
+}
+
+function deletePatient(id) {
+    clients = clients.filter(client => client.id !== id);
+    populatePatientsTab();
+}
+
+function deleteCNA(id) {
+    cnas = cnas.filter(cna => cna.id !== id);
+    populateCNAsTab();
+}
+
+function showAddPatientModal() {
+    // Implement a modal for adding a new patient
+    // This should include all necessary fields and a submit button
+    // On submit, add the new patient to the clients array and refresh the tab
+}
+
+function showAddCNAModal() {
+    // Implement a modal for adding a new CNA
+    // This should include necessary fields and a submit button
+    // On submit, add the new CNA to the cnas array and refresh the tab
+}
+
+        // Initialize the application
+        document.getElementById('addPatientForm').addEventListener('submit', addNewPatient);
+        showCenter('client');
+    </script>
+</body>
+</html>
